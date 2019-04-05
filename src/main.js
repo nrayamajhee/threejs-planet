@@ -1,3 +1,5 @@
+import Skybox from './img/skybox/starmap.jpg';
+
 const Colors = {
     green: 0x00ff00,
     blue: 0x0000ff,
@@ -5,7 +7,7 @@ const Colors = {
 function loadSkyBox(path) {
     let textureLoader = new THREE.TextureLoader();
 
-    textureEquirec = textureLoader.load(path);
+    let textureEquirec = textureLoader.load(path);
     textureEquirec.mapping = THREE.EquirectangularReflectionMapping;
     textureEquirec.magFilter = THREE.LinearFilter;
     textureEquirec.minFilter = THREE.LinearMipMapLinearFilter;
@@ -84,7 +86,7 @@ class Game {
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
         this.scene.add(directionalLight);
 
-        const skybox = loadSkyBox('textures/skybox/starmap.jpg');
+        const skybox = loadSkyBox(Skybox);
         this.sceneSky.add(skybox);
 
         this.renderer = new THREE.WebGLRenderer();
@@ -120,3 +122,8 @@ class Game {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 }
+
+window.addEventListener('load',()=>{
+    let game = new Game();
+    game.update();
+});
