@@ -1,3 +1,7 @@
+const Colors = {
+    green: 0x00ff00,
+    blue: 0x0000ff,
+};
 function loadSkyBox(path) {
     let textureLoader = new THREE.TextureLoader();
 
@@ -32,21 +36,32 @@ function loadSkyBox(path) {
     return new THREE.Mesh(new THREE.IcosahedronBufferGeometry(100, 2), equirectMaterial);
 }
 
-function generatePlanet(radius, subdivision) {
+class Planet {
+    constructor() {
+        this.group = new THREE.Group();
+        this.lithosphere = generateSphere(1, 4, true, Colors.green);
+        this.hydrosphere = generateSphere(1, 3, false, Colors.blue);
+        this.group.add(this.lithosphere);
+        this.group.add(this.hydrosphere);
+    }
+    update() {
+        this.group.rotation.y += 0.01;
+    }
+}
+
+function generateSphere(radius, subdivision, displace, color) {
     noise.seed(Math.random());
-    let geometry = new THREE.IcosahedronBufferGeometry(radius, subdivision);
-    // let vertices = geometry.attributes.position.array;
-    // for(let i = 0; i < vertices.length - 3; i+=3) {
-    //     // const d = radius + noise.simplex3(vertices[i], vertices[i + 1], vertices[i + 2]);
-    //     const d = radius;
-    //     console.log(d);
-    //     vertices[i] = vertices[i] * d;
-    //     vertices[i+1] = vertices[i] * d;
-    //     vertices[i+2] = vertices[i] * d;
-    // }
-    // geometry.attributes.position.array = vertices;
+    let geometry = new THREE.IcosahedronGeometry(1, subdivision);
+    geometry.vertices.forEach((e)=>{
+        let d = radius;
+        if (displace)
+            d = radius + noise.simplex3(e.x, e.y, e.z) / 10;
+        e.x *= d;
+        e.y *= d;
+        e.z *= d;
+    });
     const material = new THREE.MeshPhysicalMaterial({
-        color: 0x00ff00,
+        color: color,
         roughness: 1.0,
     });
 
@@ -81,15 +96,14 @@ class Game {
 
         this.controls = new THREE.OrbitControls(this.camera);
 
-        this.planet = generatePlanet(1, 3);
-        this.scene.add(this.planet);
+        this.planet = new Planet();
+        this.scene.add(this.planet.group);
 
         window.addEventListener('resize', () => { this.resize() });
     }
     update() {
         requestAnimationFrame(() => { this.update() });
-        this.planet.rotation.x += 0.01;
-        this.planet.rotation.y += 0.01;
+        this.planet.update();
 
         this.camera.lookAt(this.scene.position);
         this.cameraSky.rotation.copy(this.camera.rotation);
