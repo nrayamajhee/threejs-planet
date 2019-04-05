@@ -19,9 +19,13 @@
 	<script src="lib/three/three.js"></script>
 	<script src="lib/three/WebGL.js"></script>
 	<script src="lib/three/OrbitControls.js"></script>
+	<script src="lib/perlin.js"></script>
 	<script src="js/main.js"></script>
 	<script>
-		window.addEventListener('load', main, false);
+		(()=>{
+			let game = new Game();
+			game.update();
+		})();
 	</script>
 </body>
 

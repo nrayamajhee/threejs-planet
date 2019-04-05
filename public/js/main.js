@@ -7,9 +7,9 @@ function loadSkyBox(path) {
     textureEquirec.minFilter = THREE.LinearMipMapLinearFilter;
     textureEquirec.encoding = THREE.sRGBEncoding;
 
-    var equirectShader = THREE.ShaderLib["equirect"];
+    let equirectShader = THREE.ShaderLib["equirect"];
 
-    var equirectMaterial = new THREE.ShaderMaterial({
+    let equirectMaterial = new THREE.ShaderMaterial({
         fragmentShader: equirectShader.fragmentShader,
         vertexShader: equirectShader.vertexShader,
         uniforms: equirectShader.uniforms,
@@ -29,55 +29,80 @@ function loadSkyBox(path) {
 
     });
 
-    return new THREE.Mesh(new THREE.IcosahedronBufferGeometry(100, 3), equirectMaterial);
+    return new THREE.Mesh(new THREE.IcosahedronBufferGeometry(100, 2), equirectMaterial);
 }
-function main() {
-    if (WEBGL.isWebGLAvailable() === false) {
-        document.body.appendChild(WEBGL.getWebGLErrorMessage());
-    }
 
-    var scene = new THREE.Scene();
-
-    var renderer = new THREE.WebGLRenderer();
-    renderer.toneMapping = THREE.LinearToneMapping;
-    renderer.toneMappingExposure = 1.0;
-
-    document.body.appendChild(renderer.domElement);
-
-    let directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    scene.add(directionalLight);
-
-    var geometry = new THREE.IcosahedronBufferGeometry(1, 2);
-    var material = new THREE.MeshPhysicalMaterial({
+function generatePlanet(radius, subdivision) {
+    noise.seed(Math.random());
+    let geometry = new THREE.IcosahedronBufferGeometry(radius, subdivision);
+    // let vertices = geometry.attributes.position.array;
+    // for(let i = 0; i < vertices.length - 3; i+=3) {
+    //     // const d = radius + noise.simplex3(vertices[i], vertices[i + 1], vertices[i + 2]);
+    //     const d = radius;
+    //     console.log(d);
+    //     vertices[i] = vertices[i] * d;
+    //     vertices[i+1] = vertices[i] * d;
+    //     vertices[i+2] = vertices[i] * d;
+    // }
+    // geometry.attributes.position.array = vertices;
+    const material = new THREE.MeshPhysicalMaterial({
         color: 0x00ff00,
         roughness: 1.0,
     });
 
-    let cubeMesh = loadSkyBox('textures/skybox/starmap.jpg');
-    scene.add(cubeMesh);
+    return new THREE.Mesh(geometry, material);
+}
 
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.gammaInput = true;
-    renderer.gammaOutput = true;
+class Game {
+    constructor() {
+        if (WEBGL.isWebGLAvailable() === false) {
+            document.body.appendChild(WEBGL.getWebGLErrorMessage());
+        }
 
+        this.sceneSky = new THREE.Scene();
+        this.scene = new THREE.Scene();
 
-    let camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-    camera.position.set(0, 0, 5);
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+        this.cameraSky = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+        this.camera.position.set(0, 0, 5);
 
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        this.scene.add(directionalLight);
 
-    var cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
+        const skybox = loadSkyBox('textures/skybox/starmap.jpg');
+        this.sceneSky.add(skybox);
 
-    var animate = function () {
-        requestAnimationFrame(animate);
+        this.renderer = new THREE.WebGLRenderer();
+        this.renderer.autoClear = false;
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(this.renderer.domElement);
+        this.renderer.gammaOutput = true;
 
-        cube.rotation.x += 0.01;
-        cube.rotation.y += 0.01;
-        controls.update();
+        this.controls = new THREE.OrbitControls(this.camera);
 
-        renderer.render(scene, camera);
-    };
-    animate();
+        this.planet = generatePlanet(1, 3);
+        this.scene.add(this.planet);
+
+        window.addEventListener('resize', () => { this.resize() });
+    }
+    update() {
+        requestAnimationFrame(() => { this.update() });
+        this.planet.rotation.x += 0.01;
+        this.planet.rotation.y += 0.01;
+
+        this.camera.lookAt(this.scene.position);
+        this.cameraSky.rotation.copy(this.camera.rotation);
+
+        this.renderer.render(this.sceneSky, this.cameraSky);
+        this.renderer.render(this.scene, this.camera);
+    }
+    resize() {
+        let aspect = window.innerWidth / window.innerHeight;
+        this.camera.aspect = aspect;
+        this.camera.updateProjectionMatrix();
+        this.cameraSky.aspect = aspect;
+        this.cameraSky.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
 }
