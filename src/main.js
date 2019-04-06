@@ -1,9 +1,9 @@
 import Skybox from './img/skybox/starmap.jpg';
+import Stats from 'stats.js';
+import Planet from './planet.js';
+import * as THREE from 'three';
+import OrbitControls from 'three-orbitcontrols';
 
-const Colors = {
-    green: 0x00ff00,
-    blue: 0x0000ff,
-};
 function loadSkyBox(path) {
     let textureLoader = new THREE.TextureLoader();
 
@@ -35,39 +35,7 @@ function loadSkyBox(path) {
 
     });
 
-    return new THREE.Mesh(new THREE.IcosahedronBufferGeometry(100, 2), equirectMaterial);
-}
-
-class Planet {
-    constructor() {
-        this.group = new THREE.Group();
-        this.lithosphere = generateSphere(1, 4, true, Colors.green);
-        this.hydrosphere = generateSphere(1, 3, false, Colors.blue);
-        this.group.add(this.lithosphere);
-        this.group.add(this.hydrosphere);
-    }
-    update() {
-        this.group.rotation.y += 0.01;
-    }
-}
-
-function generateSphere(radius, subdivision, displace, color) {
-    noise.seed(Math.random());
-    let geometry = new THREE.IcosahedronGeometry(1, subdivision);
-    geometry.vertices.forEach((e)=>{
-        let d = radius;
-        if (displace)
-            d = radius + noise.simplex3(e.x, e.y, e.z) / 10;
-        e.x *= d;
-        e.y *= d;
-        e.z *= d;
-    });
-    const material = new THREE.MeshPhysicalMaterial({
-        color: color,
-        roughness: 1.0,
-    });
-
-    return new THREE.Mesh(geometry, material);
+    return new THREE.Mesh(new THREE.IcosahedronBufferGeometry(1000, 1), equirectMaterial);
 }
 
 class Game {
@@ -81,7 +49,9 @@ class Game {
 
         this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
         this.cameraSky = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-        this.camera.position.set(0, 0, 5);
+        this.controls = new OrbitControls(this.camera);
+        this.camera.position.set(0, 110, 10);
+        this.controls.target.set(0, 100, 0);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
         this.scene.add(directionalLight);
@@ -92,26 +62,38 @@ class Game {
         this.renderer = new THREE.WebGLRenderer();
         this.renderer.autoClear = false;
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(this.renderer.domElement);
         this.renderer.gammaOutput = true;
 
-        this.controls = new THREE.OrbitControls(this.camera);
+        this.resize();
+
+        if (this.renderer.extensions.get('ANGLE_instanced_arrays') === null) {
+            document.getElementById('notSupported').style.display = '';
+            return;
+        }
 
         this.planet = new Planet();
         this.scene.add(this.planet.group);
 
         window.addEventListener('resize', () => { this.resize() });
+
+        this.stats = new Stats();
+        this.stats.showPanel(0);
+        document.body.appendChild(this.stats.dom);
     }
     update() {
-        requestAnimationFrame(() => { this.update() });
+        this.stats.begin();
         this.planet.update();
 
         this.camera.lookAt(this.scene.position);
         this.cameraSky.rotation.copy(this.camera.rotation);
 
+        this.controls.update();
+
         this.renderer.render(this.sceneSky, this.cameraSky);
         this.renderer.render(this.scene, this.camera);
+        this.stats.end();
+        requestAnimationFrame(() => { this.update() });
     }
     resize() {
         let aspect = window.innerWidth / window.innerHeight;
@@ -123,7 +105,7 @@ class Game {
     }
 }
 
-window.addEventListener('load',()=>{
+window.addEventListener('load', () => {
     let game = new Game();
     game.update();
 });
